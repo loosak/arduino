@@ -1,0 +1,36 @@
+#######################################
+# Syntax Coloring Map For WifiConfig
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+WiFiConfig	KEYWORD1
+wificonfigarea_t KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+getOurIP KEYWORD2
+getOurMAC KEYWORD2
+getEEPROMString KEYWORD2
+begin	KEYWORD2
+setEEPROMString KEYWORD2
+getEEPROMuint32 KEYWORD2
+setEEPROMuint32 KEYWORD2
+
+#######################################
+# Instances (KEYWORD2)
+#######################################
+
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+WCS_CONNECTSTART LITERAL1
+WCS_CONNECTING LITERAL1
+WCS_CONFIGSTART LITERAL1
+WCS_CONFIGWAIT LITERAL1

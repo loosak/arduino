@@ -1,0 +1,39 @@
+/*
+  BlinkNcount for Maple Mini by m. ray burnette
+  Compiled on Linux Mint 32-bit
+  Arduino 1.7.9 using Maple Mini Bootloader 2.0 tested on 20160415
+    Sketch uses 15,260 bytes (10%) of program storage space. Maximum is 122,880 bytes.
+    Global variables use 2,560 bytes of dynamic memory.
+  Turns on an LED on for one second, then off for one second, repeatedly.
+  Counts and displays the count on the attached serial monitor
+  This example code is in the public domain.
+ */
+
+#define BOARD_LED_PIN PB1                                                     // Maple Mini pin# 33 is status LED
+
+int n=0;
+
+void setup()
+{
+    pinMode(BOARD_LED_PIN, OUTPUT);                                           // digital pin as an output.
+    Serial.begin(9600);                                                           // BAUD has no effect on USB serial
+/*                                                                              // wait to be connected.
+    while (!(Serial.isConnected() && (Serial.getDTR() || Serial.getRTS())))
+    {
+        digitalWrite(BOARD_LED_PIN,!digitalRead(BOARD_LED_PIN));              // Flip LED state
+        delay(50);
+    }
+    Serial.printf("-PROGRAM START-\r\n");
+*/
+}
+
+void loop()
+{
+    long uScount;
+    digitalWrite(BOARD_LED_PIN, HIGH); delay(500);                            // LED_on  + half-second
+    uScount = micros();
+    //Serial.printf("Loop #: % 5d %08X %ld %p %f\r\n",n,n,n,&n,n++);            // exercise NEW function
+    uScount = micros() - uScount;
+    Serial.print("\t\t\t\t uS="); Serial.println( uScount);
+    digitalWrite(BOARD_LED_PIN, LOW); delay(500);                             // LED_off + half-second
+}

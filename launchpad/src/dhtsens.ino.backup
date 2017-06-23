@@ -1,0 +1,155 @@
+#include <DHT.h>
+
+#	define DEBUG true //Prints AT responses to serial terminal, set to False if you do not want to print
+#define tempHumidity 23 //Input analog pin for the temp humidity sensor
+#define button1 PUSH1
+#define button2 PUSH2
+#define LED2 GREEN_LED
+#define LED RED_LED
+
+String wifiSSID= "XXXXXXX"; //Set this to your WiFi SSID
+String wifiKey = "XXXXXXXXX"; //Set this to your WiFi password
+String apiKey = "XXXXXXX"; //API key from thing speak, used to post data
+DHT dht(tempHumidity,DHT22); //Declare the temp/humidity sensor.  DHT22 is the type of sensor.  The blue sensor is the DHT11
+
+void setup()
+{
+  Serial.begin(115200);
+  Serial1.begin(115200);
+  dht.begin();
+  delay(100);
+  pinMode(button1,INPUT_PULLUP);
+  pinMode(button2,INPUT_PULLUP);
+  pinMode(LED,OUTPUT);
+  pinMode(LED2,OUTPUT);
+  digitalWrite(LED,LOW);
+  digitalWrite(LED2,LOW);
+  Serial.println("Press S1 to enter Server mode");
+  Serial.println("Press S2 to publish data to ThingSpeak");
+}
+
+void loop()
+{
+  if(!digitalRead(button1)){ //If entering server mode
+  digitalWrite(LED2,LOW);
+    for(int i = 0; i<4;i++){ //Blink LED to indicate something is happening
+      digitalWrite(LED,LOW);
+      delay(100);
+      digitalWrite(LED,HIGH);
+      delay(100);
+    }
+    sendData("AT+RST\r\n",2000,DEBUG); // reset module
+    delay(3000);
+    sendData("AT+CWMODE=2\r\n",1000,DEBUG); // configure as access point
+    sendData("AT+CIFSR\r\n",1000,DEBUG); // get ip address
+    sendData("AT+CIPMUX=1\r\n",1000,DEBUG); // configure for multiple connections
+    sendData("AT+CIPSERVER=1,80\r\n",1000,DEBUG); // turn on server on port 80
+    serverMode(); //Run the code to act as a web server
+  }
+  if(!digitalRead(button2)){ //if entering thing speak mode
+  digitalWrite(LED,LOW);
+    for(int i = 0; i<4;i++){ //Blink LED to indicate something is happening
+      digitalWrite(LED2,LOW);
+      delay(100);
+      digitalWrite(LED2,HIGH);
+      delay(100);
+    }
+    sendData("AT+RST\r\n",2000,DEBUG); // reset module
+    delay(3000);
+    sendData("AT+CWMODE=3\r\n",1000,DEBUG); //configure to access AP
+    Serial.println("Attempting to connect to WiFi");
+    String cnnct = ("AT+CWJAP=\"" + wifiSSID + "\",\"" + wifiKey +"\"\r\n");  //Set up string to connect to wifi
+    String response = sendData(cnnct,20000,DEBUG); //Connect to wifi using credentials provided
+    while (response.indexOf("FAIL") != -1){ //If connection failed, try again
+      Serial.println("Attempting to connect to WiFi");
+      response = sendData(cnnct,20000,DEBUG);
+    }
+    thingSpeak(); //enter into thing speak mode
+  }
+  else delay(50);
+}
+
+void serverMode(){
+  while(digitalRead(button2)){
+    if(Serial1.available()) // check if the esp is sending a message
+    {
+
+      while(Serial1.available())
+      {
+        // The esp has data so display its output to the serial window
+        char c = Serial1.read(); // read the next character.
+        Serial.write(c);
+      }
+
+      if(Serial1.find("+IPD,"))
+      {
+       delay(1000);
+
+       int connectionId = Serial1.read()-48; // subtract 48 because the read() function returns
+                                             // the ASCII decimal value and 0 (the first decimal number) starts at 48
+       int temperature = dht.readTemperature(true);// Set to false if want to read Celcius
+       int humidity = dht.readHumidity();
+       String header = "<html><head><title>HTML in 10 Simple Steps or Less</title><meta http-equiv=\"refresh\" content=\"5\" /></head><body>";
+       String webpage = header + "<h1>Weather Values:</h1><p>Temperature = " + String(temperature) +"F<br>Humidity = " + String(humidity) + "%</p></body></html>";
+       int length = webpage.length();
+       String cipSend = "AT+CIPSEND=";
+       cipSend += connectionId;
+       cipSend += ",";
+       cipSend += length;
+       cipSend +="\r\n";
+       sendData(cipSend,500,DEBUG); //Set up TCP connection
+       sendData(webpage,500,DEBUG);  //Send the data
+       String closeCommand = "AT+CIPCLOSE=";
+       closeCommand+=5; // append connection id
+       closeCommand+="\r\n";
+       sendData(closeCommand,1000,DEBUG); //close TCP connection
+      }
+    }
+  }
+}
+
+void thingSpeak(){
+  while(digitalRead(button1)){
+    float temperature = dht.readTemperature(true); //Set to false if want to read in celcius
+    float humidity = dht.readHumidity();
+    sendData("AT+CIPSTART=\"TCP\",\"184.106.153.149\",80\r\n",500,DEBUG); // turn on server on port 80
+    String dataWrite = "GET /update?api_key=" + apiKey + "&field1=" + String(temperature) + "&field2=" + String(humidity) + "\r\n";
+    String cmd = "AT+CIPSEND=";
+    int length = dataWrite.length();
+    cmd += length;
+    cmd += "\r\n";
+    sendData(cmd,500,DEBUG); //Set up TCP connection
+    sendData(dataWrite,1000,DEBUG); //Send data to thing speak
+    long int time = millis();
+    while((time+5000)>millis() && digitalRead(button1)){ //delay for 5 seconds before sending data or until button1 is pressed
+    }
+  }
+}
+
+String sendData(String command, const int timeout, boolean debug)
+{
+    String output = "";
+
+    Serial1.print(command); // send the read character to the Serial1
+
+    long int time = millis();
+
+    while( (time+timeout) > millis())//wait for a response until timeout is up
+    {
+      while(Serial1.available())
+      {
+        // The esp has data so display its output to the serial window
+        char c = Serial1.read(); // read the next character.
+        output+=c;
+      }
+      if ((output.indexOf("FAIL") != -1)||(output.indexOf("OK")!=-1)){ //if response received break from the timeout loop
+        break;
+      }
+    }
+
+    if(debug)
+    {
+      Serial.print(output);
+    }
+    return output;
+}

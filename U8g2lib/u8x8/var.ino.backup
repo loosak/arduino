@@ -1,0 +1,70 @@
+
+int maximum(const int pocet, const bool znamenko, ...)
+{
+    va_list ap;
+    int i;
+    int maxS, dalsiS;
+    unsigned int maxU, dalsiU;
+
+    if (pocet <= 0)
+        return 0;
+
+    /* znamenko je posledni deklarovana promenna */
+    va_start(ap, znamenko);
+
+    if (znamenko)
+        maxS = va_arg(ap, int);
+    else
+        maxU = va_arg(ap, unsigned int);
+
+    for (i = 0; i < pocet - 1; i++) {
+        if (znamenko) {
+            dalsiS = va_arg(ap, int);
+            maxS = (maxS < dalsiS) ? dalsiS : maxS;
+        } else {
+            dalsiU = va_arg(ap, unsigned int);
+            maxU = (maxU < dalsiU) ? dalsiU : maxU;
+        }
+    }
+
+    va_end(ap);
+    if (znamenko)
+        return maxS;
+    else
+        return (signed int) maxU;
+}
+
+#define DEBUG_BUFFER_SIZE 16
+#define DEBUG true
+
+char* dbgprint ( const char* format, ... )
+{
+  static char sbuf[DEBUG_BUFFER_SIZE] ;                // For debug lines
+  va_list varArgs ;                                    // For variable number of params
+
+  va_start ( varArgs, format ) ;                       // Prepare parameters
+  vsnprintf ( sbuf, sizeof(sbuf), format, varArgs ) ;  // Write formatted data from variable argument list to sized buffer
+  va_end ( varArgs ) ;                                 // End of using parameters
+
+  if ( DEBUG )                                         // DEBUG on?
+  {
+    Serial.print ( "D: " ) ;                           // Yes, print prefix
+    Serial.println ( sbuf ) ;                          // and the info
+  }
+  return sbuf ;                                        // Return stored string
+}
+
+void setup() {
+		Serial.begin(115200);
+		delay(5000);
+		Serial.printf("____________________________________________________________\n");
+		dbgprint("a %s", "jeden");
+		dbgprint("b %s %s", "dva", "tri");
+    Serial.printf("Maximum = %i\n", maximum(3, true, 7, 9, -2));
+    Serial.printf("Maximum = %i\n", maximum(7, true, -5, 8, -2, 5, -6, -1, 4));
+    Serial.printf("Maximum = %u\n", (unsigned int) maximum(7, false, -5, 8, -2, 5, -6, -1, 4));
+}
+
+void loop() {
+	/* code */
+}
